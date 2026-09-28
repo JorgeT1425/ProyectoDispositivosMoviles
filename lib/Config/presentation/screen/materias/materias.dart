@@ -234,6 +234,17 @@ class _MateriasState extends State<Materias> {
                           final String periodo = semestreInfo?['periodo'] ?? '';
                           final dynamic nota = mat['nota_definitiva'];
                           final int creditos = mat['creditos'] ?? 0;
+                          final String codigoMateria = mat['codigo'] ?? '';
+
+                          // DETECCIÓN: Materia repetida (mismo código presente en 2 o más semestres distintos)
+                          final semestresConEsteCodigo = _todasLasMaterias
+                              .where((m) =>
+                                  m['codigo'] != null &&
+                                  m['codigo'].toString().trim().toLowerCase() == codigoMateria.trim().toLowerCase())
+                              .map((m) => m['semestre_id'])
+                              .toSet();
+
+                          final bool esMateriaRepetida = semestresConEsteCodigo.length >= 2;
 
                           final estilo = _obtenerEstiloEstado(nota);
                           final String notaTexto = nota != null ? (nota as num).toStringAsFixed(1) : '--';
@@ -268,7 +279,7 @@ class _MateriasState extends State<Materias> {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            '${mat['codigo']} · $periodo',
+                                            '$codigoMateria · $periodo',
                                             style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                           ),
                                           const SizedBox(height: 10),
@@ -289,6 +300,24 @@ class _MateriasState extends State<Materias> {
                                                   ),
                                                 ),
                                               ),
+                                              if (esMateriaRepetida) ...[
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFFFF3E0),
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: const Text(
+                                                    'Repetida',
+                                                    style: TextStyle(
+                                                      color: Color(0xFFE65100),
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 11,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                               const SizedBox(width: 10),
                                               Text(
                                                 '$creditos créditos',
@@ -417,9 +446,37 @@ class _FormularioMateriaScreenState extends State<FormularioMateriaScreen> {
     setState(() => guardando = true);
 
     try {
+      final String codigoLimpio = codigoCtrl.text.trim();
+
+      // VALIDACIÓN: Una materia no puede repetirse dentro del mismo semestre con el mismo código
+      var queryMateriaSemestre = supabase
+          .from('materias')
+          .select('id')
+          .eq('semestre_id', semestreSeleccionadoId!)
+          .ilike('codigo', codigoLimpio);
+
+      if (widget.materiaExistente != null) {
+        queryMateriaSemestre = queryMateriaSemestre.neq('id', widget.materiaExistente!['id']);
+      }
+
+      final materiaExistenteEnSemestre = await queryMateriaSemestre.maybeSingle();
+
+      if (materiaExistenteEnSemestre != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Ya existe una materia con el código "$codigoLimpio" en este semestre.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        setState(() => guardando = false);
+        return;
+      }
+
       final datos = {
         'semestre_id': semestreSeleccionadoId,
-        'codigo': codigoCtrl.text.trim(),
+        'codigo': codigoLimpio,
         'nombre': nombreCtrl.text.trim(),
         'docente': docenteCtrl.text.trim().isEmpty ? null : docenteCtrl.text.trim(),
         'creditos': int.tryParse(creditosCtrl.text) ?? 0,

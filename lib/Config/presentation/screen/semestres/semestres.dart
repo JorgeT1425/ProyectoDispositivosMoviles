@@ -391,6 +391,19 @@ class _FormularioSemestreScreenState extends State<FormularioSemestreScreen> {
     super.dispose();
   }
 
+  DateTime? _parseFecha(String input) {
+    try {
+      final partes = input.trim().split(RegExp(r'[/.-]'));
+      if (partes.length == 3) {
+        final dia = int.parse(partes[0]);
+        final mes = int.parse(partes[1]);
+        final anio = int.parse(partes[2]);
+        return DateTime(anio, mes, dia);
+      }
+    } catch (_) {}
+    return DateTime.tryParse(input.trim());
+  }
+
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -400,11 +413,83 @@ class _FormularioSemestreScreenState extends State<FormularioSemestreScreen> {
     setState(() => guardando = true);
 
     try {
+      final String periodoLimpio = periodoCtrl.text.trim();
+      final String fechaInicioTexto = fechaInicioCtrl.text.trim();
+      final String fechaFinTexto = fechaFinCtrl.text.trim();
+
+      // 1. VALIDACIÓN: Fecha final posterior a la fecha inicial
+      final fInicio = _parseFecha(fechaInicioTexto);
+      final fFin = _parseFecha(fechaFinTexto);
+
+      if (fInicio != null && fFin != null) {
+        if (!fFin.isAfter(fInicio)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('La fecha final debe ser posterior a la fecha inicial.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          setState(() => guardando = false);
+          return;
+        }
+      }
+
+      // 2. VALIDACIÓN: Un usuario no puede repetir el mismo periodo
+      var queryPeriodo = supabase
+          .from('semestres')
+          .select('id')
+          .eq('id_usuario', idUsuario)
+          .ilike('periodo', periodoLimpio);
+
+      if (widget.semestreExistente != null) {
+        queryPeriodo = queryPeriodo.neq('id', widget.semestreExistente!['id']);
+      }
+
+      final periodoExistente = await queryPeriodo.maybeSingle();
+      if (periodoExistente != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('El periodo "$periodoLimpio" ya está registrado.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+        setState(() => guardando = false);
+        return;
+      }
+
+      // 3. VALIDACIÓN: No finalizar semestre si alguna materia no tiene nota
+      if (estadoSeleccionado == 'Finalizado' && widget.semestreExistente != null) {
+        final resMaterias = await supabase
+            .from('materias')
+            .select('nota_definitiva')
+            .eq('semestre_id', widget.semestreExistente!['id']);
+
+        final List materiasList = resMaterias as List;
+        final bool haySinNota = materiasList.any((m) => m['nota_definitiva'] == null);
+
+        if (haySinNota) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No se puede finalizar el semestre si alguna materia no tiene nota.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+          }
+          setState(() => guardando = false);
+          return;
+        }
+      }
+
       final datos = {
         'id_usuario': idUsuario,
-        'periodo': periodoCtrl.text.trim(),
-        'fecha_inicio': fechaInicioCtrl.text.trim(),
-        'fecha_fin': fechaFinCtrl.text.trim(),
+        'periodo': periodoLimpio,
+        'fecha_inicio': fechaInicioTexto,
+        'fecha_fin': fechaFinTexto,
         'estado': estadoSeleccionado,
       };
 
