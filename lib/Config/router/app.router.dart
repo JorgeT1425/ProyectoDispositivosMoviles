@@ -34,13 +34,13 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/progreso',
-      name: Progreso.name,
-      builder: (context, state) => const Progreso(),
+      name: ProgressScreen.name,
+      builder: (context, state) => const ProgressScreen(),
     ),
     GoRoute(
       path: '/perfil',
-      name: Perfil.name,
-      builder: (context, state) => const Perfil(),
+      name: PerfilScreen.name,
+      builder: (context, state) => const PerfilScreen(),
     ),
   ],
 );

@@ -47,7 +47,7 @@ class _HomeState extends State<Home> {
     final int semestre = usuarioActual!['semestre_actual'] ?? 1;
     final int creditosTotales = usuarioActual!['creditos_programa'] ?? 0;
     final String? fotoUrl = usuarioActual!['foto_url'];
-
+    
     const Color azulHeader = Color(0xFF4C5FD7);
     const Color azulBotonOscuro = Color(0xFF4C5493);
     const Color grisFondo = Color(0xFFF7F8FA);
