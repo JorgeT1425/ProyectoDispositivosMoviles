@@ -37,7 +37,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
 
   Future<void> _cargarDatosProgreso() async {
     final int? idUsuario = usuarioActual?['id_usuario'];
-    _creditosTotales = usuarioActual?['creditos_totales'] ?? 160;
+    _creditosTotales = usuarioActual!['creditos_programa'] ?? 0;
 
     if (idUsuario == null) {
       setState(() => _cargando = false);

@@ -151,7 +151,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final String correo = usuarioActual?['correo'] ?? 'estudiante@universidad.edu.co';
     final String carrera = usuarioActual?['carrera'] ?? 'Carrera';
     final int semestre = usuarioActual?['semestre_actual'] ?? 1;
-    final int creditosTotales = usuarioActual?['creditos_totales'] ?? 160;
+    final int creditosTotales = usuarioActual!['creditos_programa'] ?? 0;
     final String? fotoUrl = usuarioActual?['foto_url'];
 
     return Scaffold(
