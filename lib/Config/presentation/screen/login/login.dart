@@ -159,15 +159,15 @@ class _LoginState extends State<Login> {
       String? fotoUrl;
       if (imagenSeleccionada != null) {
         fotoUrl = await subirImagen();
-      } 
+      }
 
       await supabase.from('usuarios').insert({
         'nombre': nombreController.text.trim(),
         'correo': correoController.text.trim(),
         'contrasena': passwordController.text.trim(),
         'programa': programaController.text.trim(),
-        'semestre_actual': int.tryParse(semestreController.text),
-        'creditos_programa': int.tryParse(creditosController.text),
+        'semestre_actual': int.tryParse(semestreController.text) ?? 1,
+        'creditos_programa': int.tryParse(creditosController.text) ?? 160,
         'foto_url': fotoUrl,
       });
 
@@ -251,18 +251,74 @@ class _LoginState extends State<Login> {
                     Row(
                       children: [
                         Expanded(
-                          child: _tarjetaInfoHeader(
-                            icon: Icons.calculate_outlined,
-                            titulo: 'Promedios',
-                            subtitulo: 'Por créditos',
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.calculate_outlined, color: Colors.white, size: 22),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Promedios',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Por créditos',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: _tarjetaInfoHeader(
-                            icon: Icons.show_chart,
-                            titulo: 'Progreso',
-                            subtitulo: 'Toda la carrera',
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.show_chart, color: Colors.white, size: 22),
+                                const SizedBox(width: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Progreso',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Toda la carrera',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.8),
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -312,21 +368,65 @@ class _LoginState extends State<Login> {
                         child: Row(
                           children: [
                             Expanded(
-                              child: _botonTab(
-                                texto: 'Iniciar sesión',
-                                icono: Icons.login,
-                                activo: esModoLogin,
-                                colorActivo: azulBoton,
+                              child: GestureDetector(
                                 onTap: () => setState(() => esModoLogin = true),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: esModoLogin ? azulBoton : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.login,
+                                        size: 18,
+                                        color: esModoLogin ? Colors.white : Colors.grey.shade700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Iniciar sesión',
+                                        style: TextStyle(
+                                          color: esModoLogin ? Colors.white : Colors.grey.shade700,
+                                          fontWeight: esModoLogin ? FontWeight.bold : FontWeight.normal,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                             Expanded(
-                              child: _botonTab(
-                                texto: 'Registrarse',
-                                icono: Icons.person_add_alt,
-                                activo: !esModoLogin,
-                                colorActivo: azulBoton,
+                              child: GestureDetector(
                                 onTap: () => setState(() => esModoLogin = false),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: !esModoLogin ? azulBoton : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.person_add_alt,
+                                        size: 18,
+                                        color: !esModoLogin ? Colors.white : Colors.grey.shade700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Registrarse',
+                                        style: TextStyle(
+                                          color: !esModoLogin ? Colors.white : Colors.grey.shade700,
+                                          fontWeight: !esModoLogin ? FontWeight.bold : FontWeight.normal,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -335,42 +435,112 @@ class _LoginState extends State<Login> {
 
                       const SizedBox(height: 16),
 
-                      // --- CAMPOS ESPECÍFICOS DE REGISTRO ---
+                      // CAMPOS DE REGISTRO
                       if (!esModoLogin) ...[
-                        _construirCampo(
+                        // Campo: Nombre completo
+                        TextFormField(
                           controller: nombreController,
-                          hintText: 'Nombre completo',
-                          icon: Icons.person_outline,
                           validator: (val) => val == null || val.trim().isEmpty ? 'Ingresa tu nombre' : null,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFF3F4F8),
+                            prefixIcon: Icon(Icons.person_outline, color: Colors.grey.shade700, size: 20),
+                            hintText: 'Nombre completo',
+                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
 
-                        _construirCampo(
+                        // Campo: Programa académico
+                        TextFormField(
                           controller: programaController,
-                          labelText: 'Programa académico',
-                          hintText: 'Ingeniería de Sistemas',
-                          icon: Icons.school_outlined,
                           validator: (val) => val == null || val.trim().isEmpty ? 'Ingresa tu programa académico' : null,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: const Color(0xFFF3F4F8),
+                            prefixIcon: Icon(Icons.school_outlined, color: Colors.grey.shade700, size: 20),
+                            labelText: 'Programa académico',
+                            labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                            hintText: 'Ingeniería de Sistemas',
+                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
                         ),
                         const SizedBox(height: 12),
 
+                        // Campos: Semestre y Créditos en Fila
                         Row(
                           children: [
                             Expanded(
-                              child: _construirCampo(
+                              child: TextFormField(
                                 controller: semestreController,
-                                hintText: 'Semestre...',
-                                icon: Icons.calendar_today_outlined,
                                 keyboardType: TextInputType.number,
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Ingresa el semestre';
+                                  }
+                                  if (int.tryParse(val) == null) {
+                                    return 'Solo números';
+                                  }
+                                  return null;
+                                },
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFF3F4F8),
+                                  prefixIcon: Icon(Icons.calendar_today_outlined, color: Colors.grey.shade700, size: 20),
+                                  labelText: 'Semestre',
+                                  labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                  hintText: 'Semestre...',
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _construirCampo(
+                              child: TextFormField(
                                 controller: creditosController,
-                                hintText: 'Créditos t...',
-                                icon: Icons.workspace_premium_outlined,
                                 keyboardType: TextInputType.number,
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Ingresa los créditos';
+                                  }
+                                  if (int.tryParse(val) == null) {
+                                    return 'Solo números';
+                                  }
+                                  return null;
+                                },
+                                style: const TextStyle(fontSize: 14),
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  fillColor: const Color(0xFFF3F4F8),
+                                  prefixIcon: Icon(Icons.workspace_premium_outlined, color: Colors.grey.shade700, size: 20),
+                                  labelText: 'Créditos totales',
+                                  labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                  hintText: 'Créditos t...',
+                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -379,30 +549,56 @@ class _LoginState extends State<Login> {
                       ],
 
                       // --- CAMPOS COMUNES ---
-                      _construirCampo(
+                      // Campo: Correo
+                      TextFormField(
                         controller: correoController,
-                        labelText: 'Correo institucional',
-                        hintText: 'estudiante@universidad.edu.co',
-                        icon: Icons.alternate_email,
                         keyboardType: TextInputType.emailAddress,
                         validator: (val) => val == null || !val.contains('@') ? 'Correo no válido' : null,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF3F4F8),
+                          prefixIcon: Icon(Icons.alternate_email, color: Colors.grey.shade700, size: 20),
+                          labelText: 'Correo institucional',
+                          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                          hintText: 'estudiante@universidad.edu.co',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
 
-                      _construirCampo(
+                      // Campo: Contraseña
+                      TextFormField(
                         controller: passwordController,
-                        labelText: 'Contraseña',
-                        hintText: '••••••',
-                        icon: Icons.lock_outline,
                         obscureText: ocultarPassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            ocultarPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                            color: Colors.grey,
-                          ),
-                          onPressed: () => setState(() => ocultarPassword = !ocultarPassword),
-                        ),
                         validator: (val) => val == null || val.length < 4 ? 'Mínimo 4 caracteres' : null,
+                        style: const TextStyle(fontSize: 14),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF3F4F8),
+                          prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade700, size: 20),
+                          labelText: 'Contraseña',
+                          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                          hintText: '••••••',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              ocultarPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: Colors.grey,
+                            ),
+                            onPressed: () => setState(() => ocultarPassword = !ocultarPassword),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
                       ),
 
                       // --- SECCIÓN FOTO DE PERFIL (SOLO REGISTRO) ---
@@ -431,18 +627,34 @@ class _LoginState extends State<Login> {
                         Row(
                           children: [
                             Expanded(
-                              child: _botonFoto(
-                                texto: 'Tomar foto',
-                                icono: Icons.camera_alt_outlined,
-                                onTap: () => seleccionarImagen(ImageSource.camera),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFECEEFA),
+                                  foregroundColor: const Color(0xFF4C5FD7),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                onPressed: () => seleccionarImagen(ImageSource.camera),
+                                icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                                label: const Text('Tomar foto', style: TextStyle(fontSize: 13)),
                               ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: _botonFoto(
-                                texto: 'Galería',
-                                icono: Icons.image_outlined,
-                                onTap: () => seleccionarImagen(ImageSource.gallery),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFECEEFA),
+                                  foregroundColor: const Color(0xFF4C5FD7),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                onPressed: () => seleccionarImagen(ImageSource.gallery),
+                                icon: const Icon(Icons.image_outlined, size: 18),
+                                label: const Text('Galería', style: TextStyle(fontSize: 13)),
                               ),
                             ),
                           ],
@@ -515,166 +727,6 @@ class _LoginState extends State<Login> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tarjetaInfoHeader({
-    required IconData icon,
-    required String titulo,
-    required String subtitulo,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 22),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                titulo,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                subtitulo,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 10,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _botonTab({
-    required String texto,
-    required IconData icono,
-    required bool activo,
-    required Color colorActivo,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: activo ? colorActivo : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icono, size: 18, color: activo ? Colors.white : Colors.grey.shade700),
-            const SizedBox(width: 6),
-            Text(
-              texto,
-              style: TextStyle(
-                color: activo ? Colors.white : Colors.grey.shade700,
-                fontWeight: activo ? FontWeight.bold : FontWeight.normal,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- MÉTODO CORREGIDO Y MEJORADO PARA LOS CAMPOS ---
-  Widget _construirCampo({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    String? labelText,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType keyboardType = TextInputType.text,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: const Color(0xFFF3F4F8),
-        prefixIcon: Icon(icon, color: Colors.grey.shade700, size: 20),
-        labelText: labelText,
-        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-        floatingLabelBehavior: FloatingLabelBehavior.auto,
-        hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-        suffixIcon: suffixIcon,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF4C5FD7), width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Colors.red, width: 1.5),
-        ),
-      ),
-    );
-  }
-
-  Widget _botonFoto({
-    required String texto,
-    required IconData icono,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFECEEFA),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icono, size: 18, color: const Color(0xFF4C5FD7)),
-            const SizedBox(width: 6),
-            Text(
-              texto,
-              style: const TextStyle(
-                color: Color(0xFF4C5FD7),
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-          ],
         ),
       ),
     );
