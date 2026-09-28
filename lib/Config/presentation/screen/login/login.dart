@@ -21,8 +21,9 @@ class _LoginState extends State<Login> {
   final TextEditingController nombreController = TextEditingController();
   final TextEditingController correoController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController semestreController = TextEditingController(text: '1');
-  final TextEditingController creditosController = TextEditingController(text: '160');
+  final TextEditingController semestreController = TextEditingController();
+  final TextEditingController creditosController = TextEditingController();
+  final TextEditingController programaController = TextEditingController();
 
   final ImagePicker imagePicker = ImagePicker();
 
@@ -30,7 +31,6 @@ class _LoginState extends State<Login> {
   bool ocultarPassword = true;
   bool guardando = false;
 
-  String programaSeleccionado = 'Ingeniería de Sistemas';
   XFile? imagenSeleccionada;
   String mensaje = '';
 
@@ -41,6 +41,7 @@ class _LoginState extends State<Login> {
     passwordController.dispose();
     semestreController.dispose();
     creditosController.dispose();
+    programaController.dispose();
     super.dispose();
   }
 
@@ -104,92 +105,95 @@ class _LoginState extends State<Login> {
     });
 
     try {
-      final respuesta = await supabase
+      final usuario = await supabase
           .from('usuarios')
-          .select()
+          .select('id_usuario, nombre, correo, programa, semestre_actual, creditos_programa, foto_url')
           .eq('correo', correoController.text.trim())
           .eq('contrasena', passwordController.text.trim())
           .maybeSingle();
 
+      if (usuario == null) {
+        if (!mounted) return;
+        setState(() {
+          mensaje = 'Correo o contraseña incorrectos.';
+        });
+        return;
+      }
+
+      usuarioActual = usuario;
+
       if (!mounted) return;
 
-      if (respuesta == null) {
-        setState(() => mensaje = 'Correo o contraseña incorrectos.');
-      } else {
-        usuarioActual = respuesta;
-        context.go('/home');
-      }
+      context.go('/home');
     } catch (error) {
       if (!mounted) return;
-      setState(() => mensaje = 'Error al iniciar sesión: $error');
+      setState(() {
+        mensaje = 'Error al iniciar sesión: $error';
+      });
     } finally {
-      if (mounted) setState(() => guardando = false);
+      if (mounted) {
+        setState(() => guardando = false);
+      }
     }
   }
 
   Future<void> ejecutarRegistro() async {
-  setState(() {
-    guardando = true;
-    mensaje = '';
-  });
-
-  try {
-    // 1. Verificar si el correo ya existe en Supabase
-    final duplicado = await supabase
-        .from('usuarios')
-        .select('id_usuario')
-        .eq('correo', correoController.text.trim())
-        .maybeSingle();
-
-    if (duplicado != null) {
-      if (!mounted) return;
-      setState(() => mensaje = 'El correo ya se encuentra registrado.');
-      return;
-    }
-
-    // 2. Subir imagen si la seleccionó
-    String? fotoUrl;
-    if (imagenSeleccionada != null) {
-      fotoUrl = await subirImagen();
-    }
-
-    // 3. Insertar el nuevo usuario en la base de datos
-    await supabase.from('usuarios').insert({
-      'nombre': nombreController.text.trim(),
-      'correo': correoController.text.trim(),
-      'contrasena': passwordController.text.trim(),
-      'programa': programaSeleccionado,
-      'semestre_actual': int.tryParse(semestreController.text) ?? 1,
-      'creditos_programa': int.tryParse(creditosController.text) ?? 160,
-      'foto_url': fotoUrl,
-    });
-
-    if (!mounted) return;
-
-    // 4. Guardar el correo para que quede autocompletado en el login
-    final String correoRegistrado = correoController.text.trim();
-
-    // 5. Limpiar los campos del formulario de registro
-    nombreController.clear();
-    passwordController.clear();
-    semestreController.text = '1';
-    creditosController.text = '160';
-
-    // 6. Cambiar el estado para pasar a la pantalla de Inicio de Sesión
     setState(() {
-      esModoLogin = true; // Cambia la pestaña a "Iniciar sesión"
-      imagenSeleccionada = null;
-      correoController.text = correoRegistrado; // Mantiene el correo ingresado
-      mensaje = '¡Cuenta creada con éxito! Ingresa tu contraseña para entrar.';
+      guardando = true;
+      mensaje = '';
     });
 
-  } catch (error) {
-    if (!mounted) return;
-    setState(() => mensaje = 'Error al registrar: $error');
-  } finally {
-    if (mounted) setState(() => guardando = false);
+    try {
+      final duplicado = await supabase
+          .from('usuarios')
+          .select('id_usuario')
+          .eq('correo', correoController.text.trim())
+          .maybeSingle();
+
+      if (duplicado != null) {
+        if (!mounted) return;
+        setState(() => mensaje = 'El correo ya se encuentra registrado.');
+        return;
+      }
+
+      String? fotoUrl;
+      if (imagenSeleccionada != null) {
+        fotoUrl = await subirImagen();
+      } 
+
+      await supabase.from('usuarios').insert({
+        'nombre': nombreController.text.trim(),
+        'correo': correoController.text.trim(),
+        'contrasena': passwordController.text.trim(),
+        'programa': programaController.text.trim(),
+        'semestre_actual': int.tryParse(semestreController.text),
+        'creditos_programa': int.tryParse(creditosController.text),
+        'foto_url': fotoUrl,
+      });
+
+      if (!mounted) return;
+
+      final String correoRegistrado = correoController.text.trim();
+
+      nombreController.clear();
+      programaController.clear();
+      passwordController.clear();
+      semestreController.clear();
+      creditosController.clear();
+
+      setState(() {
+        esModoLogin = true;
+        imagenSeleccionada = null;
+        correoController.text = correoRegistrado;
+        mensaje = '¡Cuenta creada con éxito! Ingresa tu contraseña para entrar.';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => mensaje = 'Error al registrar: $error');
+    } finally {
+      if (mounted) setState(() => guardando = false);
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +210,7 @@ class _LoginState extends State<Login> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
           child: Column(
             children: [
-              // --- TARJETA SUPERIOR AZUL (TrayectoriaU) ---
+              // --- TARJETA SUPERIOR AZUL ---
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -341,32 +345,12 @@ class _LoginState extends State<Login> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Dropdown Programa
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: grisCampos,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButtonFormField<String>(
-                              value: programaSeleccionado,
-                              decoration: const InputDecoration(
-                                icon: Icon(Icons.school_outlined, color: Colors.grey),
-                                border: InputBorder.none,
-                                labelText: 'Programa académico',
-                                labelStyle: TextStyle(fontSize: 12),
-                              ),
-                              items: const [
-                                DropdownMenuItem(value: 'Ingeniería de Sistemas', child: Text('Ingeniería de Sistemas')),
-                                DropdownMenuItem(value: 'Ingeniería Informática', child: Text('Ingeniería Informática')),
-                                DropdownMenuItem(value: 'Ingeniería Electrónica', child: Text('Ingeniería Electrónica')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) setState(() => programaSeleccionado = val);
-                              },
-                            ),
-                          ),
+                        _construirCampo(
+                          controller: programaController,
+                          labelText: 'Programa académico',
+                          hintText: 'Ingeniería de Sistemas',
+                          icon: Icons.school_outlined,
+                          validator: (val) => val == null || val.trim().isEmpty ? 'Ingresa tu programa académico' : null,
                         ),
                         const SizedBox(height: 12),
 
@@ -397,8 +381,8 @@ class _LoginState extends State<Login> {
                       // --- CAMPOS COMUNES ---
                       _construirCampo(
                         controller: correoController,
+                        labelText: 'Correo institucional',
                         hintText: 'estudiante@universidad.edu.co',
-                        label: 'Correo institucional',
                         icon: Icons.alternate_email,
                         keyboardType: TextInputType.emailAddress,
                         validator: (val) => val == null || !val.contains('@') ? 'Correo no válido' : null,
@@ -407,8 +391,8 @@ class _LoginState extends State<Login> {
 
                       _construirCampo(
                         controller: passwordController,
+                        labelText: 'Contraseña',
                         hintText: '••••••',
-                        label: 'Contraseña',
                         icon: Icons.lock_outline,
                         obscureText: ocultarPassword,
                         suffixIcon: IconButton(
@@ -536,7 +520,6 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // Widget auxiliar para las tarjetas de la cabecera
   Widget _tarjetaInfoHeader({
     required IconData icon,
     required String titulo,
@@ -577,7 +560,6 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // Widget auxiliar para las pestañas de selección (Iniciar sesión / Registrarse)
   Widget _botonTab({
     required String texto,
     required IconData icono,
@@ -613,42 +595,58 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // Widget para construir los campos de texto con estilo redondeado gris
+  // --- MÉTODO CORREGIDO Y MEJORADO PARA LOS CAMPOS ---
   Widget _construirCampo({
     required TextEditingController controller,
     required String hintText,
     required IconData icon,
-    String? label,
+    String? labelText,
     bool obscureText = false,
     Widget? suffixIcon,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F8),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        validator: validator,
-        decoration: InputDecoration(
-          icon: Icon(icon, color: Colors.grey.shade700, size: 20),
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-          border: InputBorder.none,
-          suffixIcon: suffixIcon,
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: const Color(0xFFF3F4F8),
+        prefixIcon: Icon(icon, color: Colors.grey.shade700, size: 20),
+        labelText: labelText,
+        labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        floatingLabelBehavior: FloatingLabelBehavior.auto,
+        hintText: hintText,
+        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+        suffixIcon: suffixIcon,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF4C5FD7), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.red, width: 1),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
       ),
     );
   }
 
-  // Widget para los botones de Cámara y Galería
   Widget _botonFoto({
     required String texto,
     required IconData icono,
